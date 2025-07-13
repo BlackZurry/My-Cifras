@@ -4,8 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>My Cifras</title>
+
+  <!-- Favicon e ícones para instalação -->
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="theme-color" content="#a67c33" />
   <link rel="manifest" href="manifest.json" />
+
+  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+
+  <!-- Estilo -->
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -36,6 +45,14 @@
 
     <div class="file-list" id="fileList"></div>
   </main>
+
   <script src="script.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('✅ Service Worker registrado!'))
+        .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
+    }
+  </script>
 </body>
 </html>
