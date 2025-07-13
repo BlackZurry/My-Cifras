@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Cifras</title>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="banner"></div>
+  <main>
+    <input type="file" id="fileInput" accept="application/pdf" multiple hidden />
+
+    <select id="artistFilter" class="artist-filter" aria-label="Filtrar por artista">
+      <option value="">🎤 Todos os Artistas</option>
+    </select>
+
+    <select id="collectionFilter" class="collection-filter" aria-label="Filtrar por coleção">
+      <option value="">📁 Todas as Coleções</option>
+    </select>
+
+    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">📄 Importar PDFs</button>
+    <button class="sort-btn" onclick="toggleSort()">📂 Mostrar: <span id="sortType">Todos</span></button>
+    <button class="sort-btn" onclick="toggleDarkMode()">🌙 Modo Escuro</button>
+
+    <input
+      type="text"
+      id="searchBar"
+      class="search-bar"
+      placeholder="Buscar cifra..."
+      autocomplete="off"
+      aria-label="Buscar cifra"
+    />
+
+    <div class="file-list" id="fileList"></div>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
