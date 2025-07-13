@@ -147,10 +147,12 @@ function renderList() {
     const thumb = document.createElement('img');
     thumb.className = 'thumbnail';
     thumb.src = file.preview || '';
+
+    // Abre o PDF numa nova aba/guia do navegador — evita about:blank
     thumb.onclick = () => {
-      const win = window.open();
-      win.document.write(`<iframe src="${file.blob}" width="100%" height="100%" style="border:none;"></iframe>`);
+      window.open(file.blob, '_blank');
     };
+
     item.appendChild(thumb);
 
     const fav = document.createElement('div');
