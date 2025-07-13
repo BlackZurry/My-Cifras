@@ -2,9 +2,12 @@
   "name": "My Cifras",
   "short_name": "Cifras",
   "start_url": ".",
+  "scope": ".",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#fdf6e3",
   "theme_color": "#a67c33",
+  "lang": "pt-BR",
   "description": "App para organizar cifras em PDF",
   "icons": [
     {
@@ -19,3 +22,4 @@
     }
   ]
 }
+
