@@ -62,15 +62,23 @@ function deletePDFfromDB(id) {
 
 // ===================== Upload de arquivos =====================
 fileInput.addEventListener('change', async (e) => {
-  for (const file of e.target.files) {
+  const files = Array.from(e.target.files);
+  for (const file of files) {
+    await processFile(file);
+  }
+  fileInput.value = '';
+});
+
+async function processFile(file) {
+  return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = async (event) => {
       let cleanName = file.name.replace(/(\.pdf)+$/i, '');
       let artist = cleanName.includes('-') ? cleanName.split('-')[0].trim() : 'Desconhecido';
-      const preview = await renderPDFPreview(event.target.result);
+      const preview = await renderPDFPreview(event.target.result) || 'default-thumbnail.png';
 
-      const id = Date.now() + "_" + Math.random(); // id único
-      await savePDFtoDB(id, file); // salva PDF real no IndexedDB
+      const id = Date.now() + "_" + Math.random();
+      await savePDFtoDB(id, file);
 
       const data = {
         id,
@@ -83,12 +91,13 @@ fileInput.addEventListener('change', async (e) => {
       };
       filesData.push(data);
       saveAndRender();
+      resolve();
     };
     reader.readAsDataURL(file);
-  }
-  fileInput.value = '';
-});
+  });
+}
 
+// ===================== Pesquisa, filtros e sorting =====================
 searchBar.addEventListener('input', renderList);
 
 function toggleSort() {
@@ -136,6 +145,7 @@ function updateCollectionFilter() {
   });
 }
 
+// ===================== PDF Preview =====================
 async function renderPDFPreview(dataUrl) {
   try {
     const base64 = dataUrl.split(',')[1];
@@ -154,24 +164,25 @@ async function renderPDFPreview(dataUrl) {
   }
 }
 
+// ===================== Renderização da lista =====================
 async function renderList() {
   const term = searchBar.value.toLowerCase();
   fileList.innerHTML = '';
 
-  let sorted = [...filesData];
-  if (sortFavoritesOnly) {
-    sorted = sorted.filter(f => f.favorite);
+  // ======= Easter Egg =======
+  if (term === '#rocknroll') {
+    fileList.innerHTML = '<div style="font-size:2rem;color:red;text-align:center;">🎸🤘 Let’s Rock! 🤘🎸</div>';
+    return;
   }
+
+  let sorted = [...filesData];
+  if (sortFavoritesOnly) sorted = sorted.filter(f => f.favorite);
 
   const selectedArtist = artistFilter.value;
-  if (selectedArtist) {
-    sorted = sorted.filter(f => f.artist === selectedArtist);
-  }
+  if (selectedArtist) sorted = sorted.filter(f => f.artist === selectedArtist);
 
   const selectedCollection = collectionFilter.value;
-  if (selectedCollection) {
-    sorted = sorted.filter(f => f.collection === selectedCollection);
-  }
+  if (selectedCollection) sorted = sorted.filter(f => f.collection === selectedCollection);
 
   sorted.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -202,7 +213,6 @@ async function renderList() {
     thumb.className = 'thumbnail';
     thumb.src = file.preview || '';
 
-    // Abre PDF do IndexedDB
     thumb.onclick = async () => {
       const blob = await getPDFfromDB(file.id);
       if (blob) {
@@ -228,10 +238,8 @@ async function renderList() {
     del.onclick = async (e) => {
       e.stopPropagation();
       if (confirm(`Excluir "${file.name}"?`)) {
-        // remove metadados
         filesData.splice(filesData.indexOf(file), 1);
         saveAndRender();
-        // remove do IndexedDB
         await deletePDFfromDB(file.id);
       }
     };
@@ -241,72 +249,7 @@ async function renderList() {
     nameText.className = 'file-name';
     nameText.textContent = file.name;
     nameText.title = "Clique para renomear";
-    nameText.onclick = (e) => {
-      e.stopPropagation();
-      item.draggable = false;
-
-      nameText.innerHTML = '';
-
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = file.name;
-      input.style.marginBottom = '0.3rem';
-      input.style.width = '100%';
-
-      const collectionInput = document.createElement('input');
-      collectionInput.type = 'text';
-      collectionInput.placeholder = 'Coleção (ex: Ensaio)';
-      collectionInput.value = file.collection || '';
-      collectionInput.style.marginBottom = '0.3rem';
-      collectionInput.style.width = '100%';
-
-      const tagInput = document.createElement('input');
-      tagInput.type = 'text';
-      tagInput.placeholder = 'Tags separadas por espaço (#ensaio #romantica)';
-      tagInput.value = (file.tags || []).join(' ');
-      tagInput.style.width = '100%';
-
-      nameText.appendChild(input);
-      nameText.appendChild(collectionInput);
-      nameText.appendChild(tagInput);
-
-      [input, collectionInput, tagInput].forEach(el => {
-        el.addEventListener('dragstart', e => e.stopPropagation());
-        el.addEventListener('click', e => e.stopPropagation());
-      });
-
-      input.focus();
-
-      function saveData() {
-        const newName = input.value.trim();
-        if (newName) {
-          file.name = newName;
-          file.artist = newName.includes('-') ? newName.split('-')[0].trim() : 'Desconhecido';
-          file.collection = collectionInput.value.trim();
-          file.tags = tagInput.value
-            .split(' ')
-            .map(t => t.trim())
-            .filter(t => t.startsWith('#') && t.length > 1);
-        }
-        item.draggable = true;
-        saveAndRender();
-      }
-
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          saveData();
-        } else if (e.key === 'Escape') {
-          renderList();
-        }
-      });
-
-      document.addEventListener('click', function handleClickOutside(ev) {
-        if (!item.contains(ev.target)) {
-          document.removeEventListener('click', handleClickOutside);
-          saveData();
-        }
-      });
-    };
+    nameText.onclick = (e) => handleRename(file, item, nameText);
     item.appendChild(nameText);
 
     if (file.collection) {
@@ -336,6 +279,70 @@ async function renderList() {
   }
 }
 
+// ===================== Renomear e editar =====================
+function handleRename(file, item, nameText) {
+  item.draggable = false;
+  nameText.innerHTML = '';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = file.name;
+  input.style.marginBottom = '0.3rem';
+  input.style.width = '100%';
+
+  const collectionInput = document.createElement('input');
+  collectionInput.type = 'text';
+  collectionInput.placeholder = 'Coleção (ex: Ensaio)';
+  collectionInput.value = file.collection || '';
+  collectionInput.style.marginBottom = '0.3rem';
+  collectionInput.style.width = '100%';
+
+  const tagInput = document.createElement('input');
+  tagInput.type = 'text';
+  tagInput.placeholder = 'Tags separadas por espaço (#ensaio #romantica)';
+  tagInput.value = (file.tags || []).join(' ');
+  tagInput.style.width = '100%';
+
+  nameText.appendChild(input);
+  nameText.appendChild(collectionInput);
+  nameText.appendChild(tagInput);
+
+  [input, collectionInput, tagInput].forEach(el => {
+    el.addEventListener('dragstart', e => e.stopPropagation());
+    el.addEventListener('click', e => e.stopPropagation());
+  });
+
+  input.focus();
+
+  function saveData() {
+    const newName = input.value.trim();
+    if (newName) {
+      file.name = newName;
+      file.artist = newName.includes('-') ? newName.split('-')[0].trim() : 'Desconhecido';
+      file.collection = collectionInput.value.trim();
+      file.tags = tagInput.value
+        .split(' ')
+        .map(t => t.trim())
+        .filter(t => t.startsWith('#') && t.length > 1);
+    }
+    item.draggable = true;
+    saveAndRender();
+  }
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveData();
+    else if (e.key === 'Escape') renderList();
+  });
+
+  document.addEventListener('click', function handleClickOutside(ev) {
+    if (!item.contains(ev.target)) {
+      document.removeEventListener('click', handleClickOutside);
+      saveData();
+    }
+  });
+}
+
+// ===================== Load from Storage =====================
 function loadFromStorage() {
   const data = localStorage.getItem('myCifrasMeta');
   if (data) {
@@ -346,7 +353,7 @@ function loadFromStorage() {
   }
 }
 
-// inicialização
+// ===================== Inicialização =====================
 (async function init() {
   await openDB();
   loadFromStorage();
