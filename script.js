@@ -11,6 +11,56 @@ const collectionFilter = document.getElementById('collectionFilter');
 artistFilter.addEventListener('change', renderList);
 collectionFilter.addEventListener('change', renderList);
 
+// ===================== IndexedDB =====================
+let db;
+const DB_NAME = "CifrasDB";
+const STORE_NAME = "pdfs";
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      resolve();
+    };
+    request.onerror = (e) => reject(e);
+  });
+}
+
+function savePDFtoDB(id, file) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put({ id, blob: file });
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+function getPDFfromDB(id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(id);
+    req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function deletePDFfromDB(id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+// ===================== Upload de arquivos =====================
 fileInput.addEventListener('change', async (e) => {
   for (const file of e.target.files) {
     const reader = new FileReader();
@@ -18,10 +68,14 @@ fileInput.addEventListener('change', async (e) => {
       let cleanName = file.name.replace(/(\.pdf)+$/i, '');
       let artist = cleanName.includes('-') ? cleanName.split('-')[0].trim() : 'Desconhecido';
       const preview = await renderPDFPreview(event.target.result);
+
+      const id = Date.now() + "_" + Math.random(); // id único
+      await savePDFtoDB(id, file); // salva PDF real no IndexedDB
+
       const data = {
+        id,
         name: cleanName,
         favorite: false,
-        blob: event.target.result,
         preview: preview,
         artist: artist,
         collection: '',
@@ -53,9 +107,9 @@ if (localStorage.getItem('darkMode') === '1') {
 }
 
 function saveAndRender() {
-  localStorage.setItem('myCifras', JSON.stringify(filesData));
+  localStorage.setItem('myCifrasMeta', JSON.stringify(filesData));
   updateArtistFilter();
-  updateCollectionFilter();  // Atualiza filtro de coleções aqui
+  updateCollectionFilter();
   renderList();
 }
 
@@ -100,7 +154,7 @@ async function renderPDFPreview(dataUrl) {
   }
 }
 
-function renderList() {
+async function renderList() {
   const term = searchBar.value.toLowerCase();
   fileList.innerHTML = '';
 
@@ -121,9 +175,9 @@ function renderList() {
 
   sorted.sort((a, b) => a.name.localeCompare(b.name));
 
-  sorted.forEach(file => {
+  for (const file of sorted) {
     if (!file.name.toLowerCase().includes(term) &&
-        !file.tags.some(t => t.toLowerCase().includes(term))) return;
+        !file.tags.some(t => t.toLowerCase().includes(term))) continue;
 
     const item = document.createElement('div');
     item.className = 'file-item';
@@ -148,11 +202,14 @@ function renderList() {
     thumb.className = 'thumbnail';
     thumb.src = file.preview || '';
 
-    // Abre o PDF numa nova aba/guia do navegador — evita about:blank
-    thumb.onclick = () => {
-      window.open(file.blob, '_blank');
+    // Abre PDF do IndexedDB
+    thumb.onclick = async () => {
+      const blob = await getPDFfromDB(file.id);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      }
     };
-
     item.appendChild(thumb);
 
     const fav = document.createElement('div');
@@ -168,11 +225,14 @@ function renderList() {
     const del = document.createElement('div');
     del.className = 'delete-btn';
     del.textContent = '❌';
-    del.onclick = (e) => {
+    del.onclick = async (e) => {
       e.stopPropagation();
       if (confirm(`Excluir "${file.name}"?`)) {
+        // remove metadados
         filesData.splice(filesData.indexOf(file), 1);
         saveAndRender();
+        // remove do IndexedDB
+        await deletePDFfromDB(file.id);
       }
     };
     item.appendChild(del);
@@ -273,11 +333,11 @@ function renderList() {
     }
 
     fileList.appendChild(item);
-  });
+  }
 }
 
 function loadFromStorage() {
-  const data = localStorage.getItem('myCifras');
+  const data = localStorage.getItem('myCifrasMeta');
   if (data) {
     filesData = JSON.parse(data);
     updateArtistFilter();
@@ -285,4 +345,9 @@ function loadFromStorage() {
     renderList();
   }
 }
-loadFromStorage();
+
+// inicialização
+(async function init() {
+  await openDB();
+  loadFromStorage();
+})();
