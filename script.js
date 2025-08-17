@@ -342,11 +342,25 @@ function handleRename(file, item, nameText) {
   });
 }
 
-// ===================== Load from Storage =====================
-function loadFromStorage() {
+// ===================== Load from Storage com reconstrução de preview =====================
+async function loadFromStorage() {
   const data = localStorage.getItem('myCifrasMeta');
   if (data) {
     filesData = JSON.parse(data);
+
+    // Reconstruir preview de cada PDF salvo no IndexedDB
+    for (const file of filesData) {
+      const blob = await getPDFfromDB(file.id);
+      if (blob) {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          file.preview = await renderPDFPreview(event.target.result) || 'default-thumbnail.png';
+          saveAndRender();
+        };
+        reader.readAsDataURL(blob);
+      }
+    }
+
     updateArtistFilter();
     updateCollectionFilter();
     renderList();
@@ -356,5 +370,5 @@ function loadFromStorage() {
 // ===================== Inicialização =====================
 (async function init() {
   await openDB();
-  loadFromStorage();
+  await loadFromStorage();
 })();
