@@ -17,9 +17,18 @@ body.dark {
   background-position: 50% 85%;
 }
 
+.file-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.2rem;
+  padding: 1rem;
+  justify-items: center;
+}
+
 .file-item {
   position: relative;
-  width: 150px;
+  width: 100%;
+  max-width: 200px;
   background: #fff8e1;
   border-radius: 14px;
   padding: 0.8rem;
@@ -28,12 +37,12 @@ body.dark {
   align-items: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
-  border: 2px solid #c3a44b; /* borda mais definida e dourada */
+  border: 2px solid #c3a44b;
 }
 .file-item:hover {
   transform: translateY(-5px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-  border-color: #a67c33; /* borda mais escura ao passar o mouse */
+  border-color: #a67c33;
 }
 
 /* Modo dark para o card */
@@ -41,7 +50,6 @@ body.dark .file-item {
   background: #2b2b2b;
   box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.1);
   border: 1px solid #444;
-  transition: background-color 0.2s, box-shadow 0.2s;
 }
 body.dark .file-item:hover {
   box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.15);
@@ -62,7 +70,6 @@ body.dark .file-item:hover {
   background: #6b4e2d;
 }
 
-/* Estilo do filtro de coleção */
 .collection-filter {
   background: #6b4e2d;
   color: white;
@@ -99,21 +106,14 @@ body.dark .collection-filter {
   font-size: 1rem;
 }
 
-.file-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
 /* Cor da coleção no modo dark */
 body.dark .file-item div.collection {
   color: #d7c68a !important;
 }
 
-/* NOVO: estilos para coleção e tags dentro do card */
 .collection {
   font-size: 0.85rem;
-  color: #8c6f1e; /* dourado forte para claro */
+  color: #8c6f1e;
   margin-top: 0.25rem;
   font-weight: 700;
   white-space: nowrap;
@@ -121,11 +121,10 @@ body.dark .file-item div.collection {
   overflow: hidden;
   text-align: center;
   width: 100%;
-  /* removi o text-shadow para modo claro */
 }
 body.dark .collection {
   color: #d7c68a;
-  text-shadow: none; /* remove sombra para evitar "duplicação" */
+  text-shadow: none;
 }
 
 .tags {
@@ -167,6 +166,7 @@ body.dark .tag {
   filter: blur(3px);
   margin-bottom: 0.6rem;
   background: #eee;
+  border-radius: 8px;
 }
 
 .favorite-btn, .delete-btn {
@@ -177,18 +177,15 @@ body.dark .tag {
   user-select: none;
 }
 
-/* Estrela padrão (não marcada) */
 .favorite-btn {
   left: 10px;
   color: black;
 }
 
-/* Estrela marcada (amarela) */
 .favorite-btn.marked {
   color: gold;
 }
 
-/* Tema escuro: estrela não marcada = cinza claro, marcada = dourada */
 body.dark .favorite-btn {
   color: #ccc;
 }
@@ -196,7 +193,6 @@ body.dark .favorite-btn.marked {
   color: gold;
 }
 
-/* Botão "X" */
 .delete-btn {
   right: 10px;
   color: crimson;
@@ -206,7 +202,7 @@ body.dark .favorite-btn.marked {
   font-size: 1rem;
   font-weight: 700;
   text-align: center;
-  background-color: #e4c94d; /* amarelo ouro mais escuro */
+  background-color: #e4c94d;
   color: #3b2e00;
   padding: 0.4rem 0.6rem;
   border-radius: 8px;
