@@ -38,7 +38,10 @@ function savePDFtoDB(id, file) {
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).put({ id, blob: file });
     tx.oncomplete = () => resolve();
-    tx.onerror = (e) => reject(e);
+    tx.onerror = (e) => {
+      console.error("Erro ao salvar no IndexedDB:", e);
+      reject(e);
+    };
   });
 }
 
@@ -77,7 +80,7 @@ async function processFile(file) {
       let artist = cleanName.includes('-') ? cleanName.split('-')[0].trim() : 'Desconhecido';
       const preview = await renderPDFPreview(event.target.result) || 'default-thumbnail.png';
 
-      const id = Date.now() + "_" + Math.random();
+      const id = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "_" + Math.random());
       await savePDFtoDB(id, file);
 
       const data = {
@@ -152,14 +155,15 @@ async function renderPDFPreview(dataUrl) {
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
     const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: 0.5 }); // reduzido para tablets
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     await page.render({ canvasContext: context, viewport }).promise;
     return canvas.toDataURL();
-  } catch {
+  } catch (err) {
+    console.error("Erro ao gerar preview:", err);
     return null;
   }
 }
@@ -169,7 +173,6 @@ async function renderList() {
   const term = searchBar.value.toLowerCase();
   fileList.innerHTML = '';
 
-  // ======= Easter Egg =======
   if (term === '#rocknroll') {
     fileList.innerHTML = '<div style="font-size:2rem;color:red;text-align:center;">🎸🤘 Let’s Rock! 🤘🎸</div>';
     return;
@@ -348,7 +351,6 @@ async function loadFromStorage() {
   if (data) {
     filesData = JSON.parse(data);
 
-    // Reconstruir preview de cada PDF salvo no IndexedDB
     for (const file of filesData) {
       const blob = await getPDFfromDB(file.id);
       if (blob) {

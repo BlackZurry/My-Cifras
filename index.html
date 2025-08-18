@@ -44,6 +44,11 @@
     />
 
     <div class="file-list" id="fileList"></div>
+
+    <div id="mobile-warning" style="display:none; color:red; margin-top:1rem; text-align:center;">
+      ⚠️ No seu dispositivo pode ser possível importar apenas 2 PDFs por vez.<br>
+      Para adicionar mais arquivos, repita a importação.
+    </div>
   </main>
 
   <script src="script.js"></script>
@@ -52,6 +57,12 @@
       navigator.serviceWorker.register('sw.js')
         .then(() => console.log('✅ Service Worker registrado!'))
         .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
+    }
+
+    // Aviso para tablets/iOS que podem limitar a importação a 2 PDFs
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (/ipad|iphone|android/.test(userAgent)) {
+      document.getElementById('mobile-warning').style.display = 'block';
     }
   </script>
 </body>
